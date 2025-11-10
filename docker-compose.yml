@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: calendar_postgres
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - calendar_net
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: calendar_rabbitmq
+    restart: always
+    env_file:
+      - ./.env
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_UI_PORT}:15672"
+    networks:
+      - calendar_net
+
+  # Agent Server
+  agent:
+    build:
+      context: ./agent_server
+      dockerfile: Dockerfile
+    container_name: calendar_agent
+    restart: always
+    depends_on:
+      - postgres
+      - rabbitmq
+    env_file:
+      - ./.env
+    ports:
+      - "${AGENT_PORT}:8000"
+    networks:
+      - calendar_net
+
+  # Worker Server
+  worker:
+    build:
+      context: ./worker_server
+      dockerfile: Dockerfile
+    container_name: calendar_worker
+    restart: always
+    depends_on:
+      - rabbitmq
+      - postgres
+    env_file:
+      - ./.env
+    networks:
+      - calendar_net
+
+volumes:
+  pgdata:
+
+networks:
+  calendar_net:
+    driver: bridge

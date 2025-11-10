@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+psycopg2-binary
+requests
+aio_pika
+python-dotenv
+google-api-python-client
+google-adk
