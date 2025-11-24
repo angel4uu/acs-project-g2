@@ -5,7 +5,7 @@ from agents.definitions import QuestionerAgent, TrackingAgent
 from google.adk.tools import ToolContext
 
 
-def ask_tracking_question(event_id: str, **kwargs):
+def ask_tracking_question(event_id: str, tool_context: ToolContext):
     """
     Utiliza esta herramienta cuando recibas una señal automática del sistema o un trigger
     indicando que un evento ha finalizado.
@@ -17,17 +17,14 @@ def ask_tracking_question(event_id: str, **kwargs):
         event_id (str): ID del evento que acaba de terminar.
     """
     try:
-        # Access ToolContext from kwargs
-        context = kwargs.get("context")
-
         # Data Retrieval
         event = MockDatabaseService.get_event(event_id)
         if not event:
             return "Error: No pude encontrar el evento para hacer seguimiento."
 
         # Update state
-        context.state["tracking_event_id"] = event_id
-        context.state["session_mode"] = "TRACKING"
+        tool_context.state["tracking_event_id"] = event_id
+        tool_context.state["session_mode"] = "TRACKING"
 
         # Agent Question Generation
         questioner = QuestionerAgent()
@@ -41,7 +38,7 @@ def ask_tracking_question(event_id: str, **kwargs):
         return f"Veo que terminó '{event_id}'. ¿Podrías decirme si lo completaste y cómo te sentiste?"
 
 
-def save_tracking_metrics(user_response: str, **kwargs):
+def save_tracking_metrics(user_response: str, tool_context: ToolContext):
     """
     Utiliza esta herramienta EXCLUSIVAMENTE cuando el sistema esté en modo 'TRACKING'
     y el usuario responda a la pregunta de seguimiento sobre su actividad reciente.
@@ -53,11 +50,7 @@ def save_tracking_metrics(user_response: str, **kwargs):
         user_response (str): La respuesta textual del usuario.
     """
     try:
-        # Access ToolContext from kwargs
-        context = kwargs.get("context")
-
-        # Retrieve event context
-        event_id = context.state.get("tracking_event_id")
+        event_id = tool_context.state.get("tracking_event_id")
         if not event_id:
             return "Error: Contexto de evento perdido."
 
@@ -84,8 +77,8 @@ def save_tracking_metrics(user_response: str, **kwargs):
 
         MockDatabaseService.save_metrics(metrics_dict)
 
-        context.state["session_mode"] = "NORMAL"
-        context.state["tracking_event_id"] = None
+        tool_context.state["session_mode"] = "NORMAL"
+        tool_context.state["tracking_event_id"] = None
 
         return "Gracias, datos guardados. ¡Sigue así!"
 

@@ -8,7 +8,7 @@ from google.adk.tools import ToolContext
 from agents.definitions import PlanningAgent, InterpreterAgent
 
 
-def orchestrate_daily_plan(**kwargs):
+def orchestrate_daily_plan(tool_context: ToolContext):
     """
     Utiliza esta herramienta cuando el usuario exprese intención de planificar su día,
     pregunte qué tiene en la agenda hoy, o quiera reorganizar sus eventos desde cero.
@@ -18,11 +18,8 @@ def orchestrate_daily_plan(**kwargs):
     2. Genera un borrador de plan inteligente con sugerencias.
     3. Establece el modo de sesión a 'PLAN_REVIEW'.
     """
-    # Access ToolContext from kwargs
-    context = kwargs.get("context")
-
     # Access user ID stored in context state
-    user_id = context.state.get("user_id")
+    user_id = tool_context.state.get("user_id")
     if not user_id:
         return "Error de sistema: No se encontró el ID de usuario en la sesión."
 
@@ -36,8 +33,8 @@ def orchestrate_daily_plan(**kwargs):
         plan_json = planner.generate(events, metrics)
 
         # Save plan draft and review mode
-        context.state["draft_plan"] = plan_json.model_dump()
-        context.state["session_mode"] = "PLAN_REVIEW"
+        tool_context.state["draft_plan"] = plan_json.model_dump()
+        tool_context.state["session_mode"] = "PLAN_REVIEW"
 
         return (
             f"He diseñado un plan con el tema: **{plan_json.daily_theme}**.\n"
@@ -50,7 +47,7 @@ def orchestrate_daily_plan(**kwargs):
         return "Lo siento, ocurrió un error al intentar generar tu plan. Por favor, inténtalo de nuevo en unos momentos."
 
 
-def handle_plan_feedback(user_input: str, **kwargs):
+def handle_plan_feedback(user_input: str, tool_context: ToolContext):
     """
     Utiliza esta herramienta EXCZ   LUSIVAMENTE cuando el sistema esté en modo 'PLAN_REVIEW'
     y el usuario proporcione feedback sobre el borrador presentado (ej: aprobar sugerencias,
@@ -62,11 +59,8 @@ def handle_plan_feedback(user_input: str, **kwargs):
         user_input (str): El texto completo del mensaje del usuario con sus instrucciones.
     """
     try:
-        # Access ToolContext from kwargs
-        context = kwargs.get("context")
-
         # Retrieve plan draft
-        draft = context.state.get("draft_plan")
+        draft = tool_context.state.get("draft_plan")
         if not draft:
             return "Error: No hay un plan borrador para revisar."
 
@@ -101,7 +95,7 @@ def handle_plan_feedback(user_input: str, **kwargs):
         ]
 
         # Save updated draft
-        context.state["draft_plan"] = draft
+        tool_context.state["draft_plan"] = draft
 
         # Build response
         response_text = f"Cambios aplicados: {', '.join(changes_summary)}."
@@ -119,7 +113,7 @@ def handle_plan_feedback(user_input: str, **kwargs):
         return "Tuve un problema procesando tu respuesta. ¿Podrías repetirla?"
 
 
-def finalize_plan(**kwargs):
+def finalize_plan(tool_context: ToolContext):
     """
     Utiliza esta herramienta cuando el usuario confirme explícitamente que está satisfecho
     con el plan actual (ej: "Confirmar", "Se ve bien", "Adelante") mientras está en modo 'PLAN_REVIEW'.
@@ -127,17 +121,14 @@ def finalize_plan(**kwargs):
     Esta herramienta aplica permanentemente los cambios en el calendario y base de datos,
     y devuelve la sesión al modo 'NORMAL'.
     """
-    # Access ToolContext from kwargs
-    context = kwargs.get("context")
-
     # Access user ID stored in context state
-    user_id = context.state.get("user_id")
+    user_id = tool_context.state.get("user_id")
     if not user_id:
         return "Error de sistema: No se encontró el ID de usuario en la sesión."
 
     try:
         # Retrieve draft plan
-        draft = context.state.get("draft_plan")
+        draft = tool_context.state.get("draft_plan")
         if not draft:
             return "Error: No hay un plan borrador para finalizar."
 
@@ -165,8 +156,8 @@ def finalize_plan(**kwargs):
 
         # Handle case where user rejected all suggestions
         if not mods_to_sync:
-            context.state.set("session_mode", "NORMAL")
-            context.state.delete("draft_plan")
+            tool_context.state.set("session_mode", "NORMAL")
+            tool_context.state.delete("draft_plan")
             return "Has rechazado todas las sugerencias. El calendario se mantiene sin cambios."
 
         # Execute approved modifications
@@ -176,8 +167,8 @@ def finalize_plan(**kwargs):
         MockQueueService.publish_schedule(user_id, draft)
 
         # State
-        context.state["session_mode"] = "NORMAL"
-        context.state["draft_plan"] = None
+        tool_context.state["session_mode"] = "NORMAL"
+        tool_context.state["draft_plan"] = None
 
         return f"¡Plan activado! He sincronizado {len(mods_to_sync)} cambios en tu calendario. ¡A por el día!"
 
