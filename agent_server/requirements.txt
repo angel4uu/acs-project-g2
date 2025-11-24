@@ -7,4 +7,4 @@ requests
 aio_pika
 python-dotenv
 google-api-python-client
-google-adk
+google-adk==1.18.0

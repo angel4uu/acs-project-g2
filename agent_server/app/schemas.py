@@ -37,7 +37,9 @@ class Modification(BaseModel):
     end: str = Field(..., description="ISO 8601 Datetime string")
     category: Literal["WORK", "MEETING", "PERSONAL", "LEARNING", "WELLNESS"]
     reason_for_suggestion: str
-    approved: bool = Field(False, description="Always False initially")
+    review_status: Literal["PENDING", "APPROVED", "REJECTED"] = Field(
+        "PENDING", description="Tracks the negotiation state of this suggestion"
+    )
 
 
 class DailyPlanOutput(BaseModel):
@@ -60,7 +62,7 @@ class ModificationUpdate(BaseModel):
     """Schema for each modification update in the Feedback Interpreter Agent's output."""
 
     temp_id: str = Field(..., description="Must match a temp_id from the draft")
-    status: Literal["APPROVED", "REJECTED", "MODIFIED"]
+    status: Literal["APPROVED", "REJECTED", "MODIFIED", "PENDING"]
     new_start: Optional[str] = None
     new_end: Optional[str] = None
 
