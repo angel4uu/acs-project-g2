@@ -1,4 +1,11 @@
-from schemas import ExistingEvent
+from rpds import List
+from agent_server.app.daily_plan_generator.libraries.schemas import (
+    DBMetrics,
+    MetricsGenerationOutput,
+    Modification,
+    CalendarEvent,
+    DBEvent,
+)
 
 
 class MockCalendarService:
@@ -6,7 +13,7 @@ class MockCalendarService:
     def get_today_events(user_id: str):
         """Retorna eventos fijos simulados."""
         return [
-            ExistingEvent(
+            CalendarEvent(
                 id="g_123",
                 name="Reunión de Sincronización Semanal",
                 start="2025-11-21T09:00:00Z",
@@ -16,9 +23,9 @@ class MockCalendarService:
         ]
 
     @staticmethod
-    def sync_changes(user_id, modifications):
+    def sync_changes(user_id, modifications: List[Modification]):
         print(f"[MOCK CALENDAR] Sincronizando cambios en Google Calendar...")
-        return True
+        return List[CalendarEvent]()
 
 
 class MockAnalysisService:
@@ -62,8 +69,10 @@ class MockAnalysisService:
 class MockDatabaseService:
     @staticmethod
     def get_event(event_id: str):
-        return ExistingEvent(
-            id=event_id,
+        return DBEvent(
+            id="db_456",
+            user_id="user_123",
+            calendar_event_id="g_789",
             name="Deep Work Session",
             start="2025-11-21T10:00:00Z",
             end="2025-11-21T12:00:00Z",
@@ -71,33 +80,28 @@ class MockDatabaseService:
         )
 
     @staticmethod
-    def save_metrics(metrics):
-        print(f"[MOCK DB] Métricas guardadas.")
-
-
-class MockQueueService:
-    @staticmethod
-    def publish_schedule(user_id: str, daily_plan: dict):
-        """
-        Simula el envío de mensajes a RabbitMQ.
-        Esto es lo que configuará los 'Workers' para despertar al agente
-        cuando terminen los eventos.
-        """
-        print(f"[MOCK QUEUE] 📨 Publicando cronograma para el usuario {user_id}...")
-
-        # Simulamos la lógica de extracción de eventos aprobados
-        events_to_schedule = 0
-        if "suggested_modifications" in daily_plan:
-            # Contamos solo los que fueron aprobados/aceptados
-            events_to_schedule = len(
-                [
-                    m
-                    for m in daily_plan["suggested_modifications"]
-                    if m.get("review_status") == "APPROVED" or m.get("approved") is True
-                ]
-            )
-
-        print(
-            f"[MOCK QUEUE] Se han encolado {events_to_schedule} triggers de seguimiento y recordatorios."
+    def get_event_by_name(event_name: str):
+        return DBEvent(
+            id="db_456",
+            user_id="user_123",
+            calendar_event_id="g_789",
+            name="Deep Work Session",
+            start="2025-11-21T10:00:00Z",
+            end="2025-11-21T12:00:00Z",
+            category="WORK",
         )
-        return True
+
+    @staticmethod
+    def save_metrics(metrics: MetricsGenerationOutput, user_id: str):
+        print(f"[MOCK DB] Métricas guardadas.")
+        return List[DBMetrics]()
+
+    @staticmethod
+    def save_events(events: List[CalendarEvent]):
+        print(f"[MOCK DB] Métricas guardadas.")
+        return List[DBEvent]()
+
+
+# class MockQueueService:
+# @staticmethod
+# def publish_schedule
