@@ -68,37 +68,13 @@ class MockAnalysisService:
 
 class MockDatabaseService:
     @staticmethod
-    def get_event(event_id: str):
-        return DBEvent(
-            id="db_456",
-            user_id="user_123",
-            calendar_event_id="g_789",
-            name="Deep Work Session",
-            start="2025-11-21T10:00:00Z",
-            end="2025-11-21T12:00:00Z",
-            category="WORK",
-        )
-
-    @staticmethod
-    def get_event_by_name(event_name: str):
-        return DBEvent(
-            id="db_456",
-            user_id="user_123",
-            calendar_event_id="g_789",
-            name="Deep Work Session",
-            start="2025-11-21T10:00:00Z",
-            end="2025-11-21T12:00:00Z",
-            category="WORK",
-        )
-
-    @staticmethod
     def save_metrics(metrics: MetricsGenerationOutput, user_id: str):
         print(f"[MOCK DB] Métricas guardadas.")
         return List[DBMetrics]()
 
     @staticmethod
     def save_events(events: List[CalendarEvent]):
-        print(f"[MOCK DB] Métricas guardadas.")
+        print(f"[MOCK DB] Eventos guardados.")
         return List[DBEvent]()
 
 
