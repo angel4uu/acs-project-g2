@@ -73,7 +73,7 @@ class MockDatabaseService:
         return List[DBMetrics]()
 
     @staticmethod
-    def save_events(events: List[CalendarEvent]):
+    def save_events(events: List[CalendarEvent], user_id: str):
         print(f"[MOCK DB] Eventos guardados.")
         return List[DBEvent]()
 
