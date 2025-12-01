@@ -2,10 +2,9 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
-# --- 1. PLANNING AGENT SCHEMA ---
 
-
-class ExistingEvent(BaseModel):
+# PLAN GENERATION AGENT SCHEMA
+class CalendarEvent(BaseModel):
     """
     Schema for events currently fetched from Google Calendar.
     At this stage, they exist only in Google, so we use the Google ID.
@@ -25,7 +24,7 @@ class ExistingEvent(BaseModel):
 
 
 class Modification(BaseModel):
-    """Schema for each suggested modification in the Planning Agent's output."""
+    """Schema for each suggested modification in the Plan Generation Agent's output."""
 
     temp_id: str = Field(..., description="Unique temporary ID (e.g., 'mod_1')")
     action: Literal["ADD", "RESCHEDULE", "REMOVE"]
@@ -42,24 +41,22 @@ class Modification(BaseModel):
     )
 
 
-class DailyPlanOutput(BaseModel):
-    """Schema for the Planning Agent's output."""
+class PlanGenerationOutput(BaseModel):
+    """Schema for the Plan Generation Agent's output."""
 
     plan_date: str
     daily_theme: str = Field(..., description="A short creative title for the day")
     motivational_quote: str
-    original_schedule: List[ExistingEvent] = Field(
+    original_schedule: List[CalendarEvent] = Field(
         ..., description="The exact list of Google Calendar events found, unaltered."
     )
     suggested_modifications: List[Modification]
     summary_text: str = Field(..., description="Natural language summary for the user")
 
 
-# --- 2. INTERPRETER AGENT SCHEMA ---
-
-
+# FEEDBACK INTERPRETATION AGENT SCHEMA
 class ModificationUpdate(BaseModel):
-    """Schema for each modification update in the Feedback Interpreter Agent's output."""
+    """Schema for each modification update in the Feedback Interpretation Agent's output."""
 
     temp_id: str = Field(..., description="Must match a temp_id from the draft")
     status: Literal["APPROVED", "REJECTED", "MODIFIED", "PENDING"]
@@ -68,21 +65,53 @@ class ModificationUpdate(BaseModel):
 
 
 class FeedbackInterpretationOutput(BaseModel):
-    """Schema for the Feedback Interpreter Agent's output."""
+    """Schema for the Feedback Interpretation Agent's output."""
 
     modifications_updates: List[ModificationUpdate]
 
 
-# --- 3. TRACKING AGENT SCHEMA ---
-
-
-class TrackingMetricOutput(BaseModel):
-    """Schema for the Tracking Agent's output."""
+# METRICS GENERATION AGENT SCHEMA
+class MetricsGenerationOutput(BaseModel):
+    """Schema for the Metrics Generation Agent's output."""
 
     event_id: str
     event_name: str
     completion_status: Literal["COMPLETED", "MISSED", "RESCHEDULED"]
     productivity_score: Optional[int] = Field(None, description="1-5 Scale")
     mood_score: Optional[int] = Field(None, description="1-5 Scale")
+    actual_duration_minutes: Optional[int]
+    user_comment: str
+
+
+# DB SCHEMAS
+class DBEvent(BaseModel):
+    """Schema for events stored in the database."""
+
+    id: str
+    user_id: str
+    calendar_event_id: str
+    name: str
+    start: str
+    end: str
+    category: Literal["WORK", "MEETING", "PERSONAL", "LEARNING", "WELLNESS"]
+
+
+class DBUser(BaseModel):
+    """Schema for users stored in the database."""
+
+    id: str
+    google_id: str
+    name: str
+    session_id: str
+
+
+class DBMetrics(BaseModel):
+    """Schema for metrics stored in the database."""
+
+    id: str
+    event_id: str
+    completion_status: Literal["COMPLETED", "MISSED", "RESCHEDULED"]
+    productivity_score: Optional[int]
+    mood_score: Optional[int]
     actual_duration_minutes: Optional[int]
     user_comment: str

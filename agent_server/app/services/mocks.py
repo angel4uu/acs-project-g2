@@ -1,5 +1,6 @@
-from rpds import List
-from agent_server.app.daily_plan_generator.libraries.schemas import (
+from typing import List
+import uuid
+from libraries.schemas import (
     DBMetrics,
     MetricsGenerationOutput,
     Modification,
@@ -23,9 +24,102 @@ class MockCalendarService:
         ]
 
     @staticmethod
-    def sync_changes(user_id, modifications: List[Modification]):
-        print(f"[MOCK CALENDAR] Sincronizando cambios en Google Calendar...")
-        return List[CalendarEvent]()
+    def sync_changes(
+        user_id: str,
+        modifications: List[Modification],
+        existing_events: List[CalendarEvent],
+    ) -> List[CalendarEvent]:
+        """
+        Mock implementation that merges approved modifications into the existing calendar.
+        """
+        print(f"[MOCK CALENDAR] Starting synchronization for user {user_id}...")
+
+        calendar_state = {}
+
+        for event in existing_events:
+            # Si es un modelo Pydantic v2
+            if hasattr(event, "model_dump"):
+                event_dict = event.model_dump()
+            # Si es un modelo Pydantic v1
+            elif hasattr(event, "dict"):
+                event_dict = event.dict()
+            # Si ya es un diccionario
+            elif isinstance(event, dict):
+                event_dict = event.copy()
+            # Fallback para objetos genéricos
+            else:
+                event_dict = event.__dict__.copy()
+
+            calendar_state[event_dict["id"]] = event_dict
+        # --------------------------
+
+        count_added = 0
+        count_updated = 0
+        count_removed = 0
+
+        for mod in modifications:
+            # Aseguramos que 'mod' sea dict (por si acaso llega como objeto)
+            mod_data = mod.model_dump() if hasattr(mod, "model_dump") else mod
+
+            # CRITICAL: Only process APPROVED modifications
+            if mod_data.get("review_status") != "APPROVED":
+                continue
+
+            action = mod_data.get("action")
+
+            # --- HANDLE ADD ---
+            if action == "ADD":
+                new_event_id = f"g_{uuid.uuid4().hex[:8]}"
+                new_event = {
+                    "id": new_event_id,
+                    "name": mod_data["name"],
+                    "start": mod_data["start"],
+                    "end": mod_data["end"],
+                    "category": mod_data["category"],
+                }
+                calendar_state[new_event_id] = new_event
+                count_added += 1
+                print(f"   + Added: {mod_data['name']}")
+
+            # --- HANDLE RESCHEDULE ---
+            elif action == "RESCHEDULE":
+                target_id = mod_data.get("target_event_id")
+
+                if target_id and target_id in calendar_state:
+                    # Update times
+                    calendar_state[target_id]["start"] = mod_data["start"]
+                    calendar_state[target_id]["end"] = mod_data["end"]
+
+                    if mod_data.get("name"):
+                        calendar_state[target_id]["name"] = mod_data["name"]
+
+                    count_updated += 1
+                    print(f"   ~ Rescheduled: {mod_data['name']}")
+                else:
+                    print(
+                        f"   ! Warning: Could not find event {target_id} to reschedule"
+                    )
+
+            # --- HANDLE REMOVE ---
+            elif action == "REMOVE":
+                target_id = mod_data.get("target_event_id")
+                if target_id and target_id in calendar_state:
+                    del calendar_state[target_id]
+                    count_removed += 1
+                    print(f"   - Removed: {mod_data.get('name', 'Unknown')}")
+
+        print(
+            f"[MOCK CALENDAR] Sync Complete. Added: {count_added}, Updated: {count_updated}, Removed: {count_removed}"
+        )
+
+        # 2. Return the values as a list of dicts
+        final_event_list = list(calendar_state.values())
+
+        # Optional: Sort by start time for cleanliness
+        # Aseguramos que 'start' exista para evitar errores de sort
+        final_event_list.sort(key=lambda x: x.get("start", ""))
+
+        return final_event_list
 
 
 class MockAnalysisService:
@@ -70,12 +164,14 @@ class MockDatabaseService:
     @staticmethod
     def save_metrics(metrics: MetricsGenerationOutput, user_id: str):
         print(f"[MOCK DB] Métricas guardadas.")
-        return List[DBMetrics]()
+        # [DBMetrics]
+        return []
 
     @staticmethod
-    def save_events(events: List[CalendarEvent], user_id: str):
+    def save_events(events: List[CalendarEvent], use):
         print(f"[MOCK DB] Eventos guardados.")
-        return List[DBEvent]()
+        # [DBEvent]
+        return []
 
 
 # class MockQueueService:

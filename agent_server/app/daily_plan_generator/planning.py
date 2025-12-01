@@ -8,48 +8,9 @@ from google.adk.tools import ToolContext
 from agents.definitions import PlanningAgent, InterpreterAgent
 
 
-def orchestrate_daily_plan(tool_context: ToolContext):
-    """
-    Utiliza esta herramienta cuando el usuario exprese intención de planificar su día,
-    pregunte qué tiene en la agenda hoy, o quiera reorganizar sus eventos desde cero.
-
-    Esta herramienta:
-    1. Obtiene los eventos actuales y métricas del usuario.
-    2. Genera un borrador de plan inteligente con sugerencias.
-    3. Establece el modo de sesión a 'PLAN_REVIEW'.
-    """
-    # Access user ID stored in context state
-    user_id = tool_context.state.get("user_id")
-    if not user_id:
-        return "Error de sistema: No se encontró el ID de usuario en la sesión."
-
-    try:
-        # Data Retrieval
-        events = MockCalendarService.get_today_events(user_id)  # TODO: Param correct?
-        metrics = MockAnalysisService.get_metrics(user_id)
-
-        # Planning Agent Invocation
-        planner = PlanningAgent()
-        plan_json = planner.generate(events, metrics)
-
-        # Save plan draft and review mode
-        tool_context.state["draft_plan"] = plan_json.model_dump()
-        tool_context.state["session_mode"] = "PLAN_REVIEW"
-
-        return (
-            f"He diseñado un plan con el tema: **{plan_json.daily_theme}**.\n"
-            f"Sugerencias: {len(plan_json.suggested_modifications)}.\n"
-            f"Resumen: {plan_json.summary_text}\n"
-            "¿Revisamos los cambios?"
-        )
-    except Exception as e:
-        logger.error(f"Error en orchestrate_daily_plan: {e}", exc_info=True)
-        return "Lo siento, ocurrió un error al intentar generar tu plan. Por favor, inténtalo de nuevo en unos momentos."
-
-
 def handle_plan_feedback(user_input: str, tool_context: ToolContext):
     """
-    Utiliza esta herramienta EXCZ   LUSIVAMENTE cuando el sistema esté en modo 'PLAN_REVIEW'
+    Utiliza esta herramienta EXCLUSIVAMENTE cuando el sistema esté en modo 'PLAN_REVIEW'
     y el usuario proporcione feedback sobre el borrador presentado (ej: aprobar sugerencias,
     rechazar cambios, o solicitar modificaciones de hora específicas).
 
